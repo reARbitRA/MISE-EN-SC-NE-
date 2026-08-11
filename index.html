@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KONKRED MISE-EN-SCÈNE | Ink & Voltage Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Bebas+Neue&family=Caveat:wght@600;700&family=IBM+Plex+Mono:ital,wght@0,400;0,600;0,700;1,400&family=Oswald:wght@500;700&family=Permanent+Marker&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reactflow@11.11.4/dist/style.css" />
+    <link rel="stylesheet" href="/index.css">
+    <style>
+      /* For custom scrollbar styling to match the dark theme */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0a0a0f;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #2e2e3a;
+        border-radius: 2px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #ff2244;
+      }
+      /* React Flow overrides */
+      .react-flow__pane {
+        background-color: transparent !important;
+      }
+      .react-flow__attribution {
+        background-color: rgba(10, 10, 15, 0.8) !important;
+        color: #8a8490 !important;
+      }
+      .react-flow__minimap {
+         background-color: #1a1a24 !important;
+         border: 1px solid #2e2e3a !important;
+      }
+      .react-flow__controls {
+        box-shadow: none !important;
+      }
+      .react-flow__controls-button {
+        background-color: #1a1a24 !important;
+        border-bottom: 1px solid #2e2e3a !important;
+        fill: #c8c0b8 !important;
+      }
+      .react-flow__controls-button:hover {
+        background-color: #2e2e3a !important;
+        fill: #ff2244 !important;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.16.0",
+    "reactflow": "https://cdn.jsdelivr.net/npm/reactflow@11.11.4/+esm"
+  }
+}
+</script>
+</head>
+  <body class="bg-[#0A0A0F] text-[#C8C0B8] antialiased selection:bg-[#FF2244] selection:text-[#0A0A0F] overflow-x-hidden">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "Konkred Mise-en Scene",
+  "description": "A sophisticated UI/UX architectural blueprint for a futuristic, multi-faceted creative application. This main 'Project Nexus Dashboard' is the central hub that organizes an entire comic book project, designed to be clean, modular, and incredibly intuitive.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
