@@ -134,3 +134,128 @@ export interface SoundtrackTrack {
   key: string;
   type: 'synthwave' | 'ambient' | 'action' | 'cyberpunk-drone';
 }
+
+// ==========================================================================
+// Arena.ai Image Engine
+// OpenAI-compatible Images contract used by the Frame Generator view.
+// ==========================================================================
+
+/** Aspect ratios accepted by the Arena image generation request. */
+export type ArenaAspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
+
+/** Capability flags describing what a given Arena image model supports. */
+export interface ArenaModelCapabilities {
+  /** The model honours a separate negative prompt. */
+  negativePrompt: boolean;
+  /** The model honours aspect ratio / size control. */
+  aspectRatio: boolean;
+  /** The model can re-run the active prompt (Refine / Variations). */
+  refinement: boolean;
+  /** The model supports image-to-image operations (generative edit / upscale). */
+  imageToImage: boolean;
+}
+
+/** A model entry in the Arena image model catalog (drives the model picker UI). */
+export interface ArenaImageModel {
+  id: string;
+  name: string;
+  description: string;
+  capabilities: ArenaModelCapabilities;
+}
+
+/** Parameters for a text-to-image generation through the Arena engine. */
+export interface ArenaImageGenerationParams {
+  model: string;
+  prompt: string;
+  negativePrompt?: string;
+  aspectRatio?: ArenaAspectRatio;
+  /** Optional seed. Vary it to request a different variation of the same prompt. */
+  seed?: number;
+}
+
+/** Parameters for image-to-image operations (generative edit / upscale). */
+export interface ArenaImageEditParams {
+  model: string;
+  /** Source image as a data URL. */
+  image: string;
+  prompt: string;
+  /** 0–1: how strongly the source image should be preserved. */
+  strength?: number;
+}
+
+/**
+ * Normalized result returned by the Arena engine regardless of mode.
+ * `image` is a data URL (or, if a provider insists on remote URLs and it
+ * cannot be inlined, the remote URL itself) — either way it maps directly
+ * onto the plain string image sources used by `recentFrames`,
+ * `ComicPanelSlot.imageUrl` and the Frame Generator's edit history.
+ */
+export interface ArenaImageResult {
+  image: string;
+  /** Whether the result came from the live Arena API or the local simulation fallback. */
+  mode: 'live' | 'simulation';
+  model: string;
+  revisedPrompt?: string;
+}
+
+/** Result of the AI prompt-enhancement helper. */
+export interface ArenaPromptEnhancementResult {
+  prompt: string;
+  mode: 'live' | 'simulation';
+}
+
+/** Arena Images API request body (OpenAI-compatible `/images/generations`). */
+export interface ArenaImageApiRequest {
+  model: string;
+  prompt: string;
+  negative_prompt?: string;
+  n: number;
+  /** Pixel size derived from the requested aspect ratio, e.g. "1792x1024". */
+  size?: string;
+  response_format: 'b64_json' | 'url';
+  seed?: number;
+  /** Data URL of the source image for image-to-image workflows. */
+  image?: string;
+  strength?: number;
+}
+
+/** A single generated image inside an Arena Images API response. */
+export interface ArenaImageApiImageData {
+  b64_json?: string;
+  url?: string;
+  revised_prompt?: string;
+}
+
+/** Error body embedded in Arena API error responses. */
+export interface ArenaApiErrorBody {
+  message?: string;
+  type?: string;
+  code?: string;
+}
+
+/** Arena Images API response body. */
+export interface ArenaImageApiResponse {
+  created?: number;
+  data?: ArenaImageApiImageData[];
+  error?: ArenaApiErrorBody;
+}
+
+/** Arena chat API message (OpenAI-compatible `/chat/completions`). */
+export interface ArenaChatApiMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+/** Arena chat API request body. */
+export interface ArenaChatApiRequest {
+  model: string;
+  messages: ArenaChatApiMessage[];
+  temperature?: number;
+  max_tokens?: number;
+}
+
+/** Arena chat API response body. */
+export interface ArenaChatApiResponse {
+  choices?: { message?: { content?: string }; finish_reason?: string }[];
+  error?: ArenaApiErrorBody;
+}

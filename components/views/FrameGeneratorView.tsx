@@ -28,7 +28,7 @@ const FrameGeneratorView: React.FC<FrameGeneratorViewProps> = ({ addRecentFrame,
             THE PROJECTION BOOTH // FRAME GENERATOR
           </h2>
           <p className="font-mono text-xs text-[#8E8A84] mt-0.5">
-            Synthesize high-octane comic frames using Google Gemini & Imagen vision engines.
+            Synthesize high-octane comic frames using Arena.ai vision engines.
           </p>
         </div>
       </div>

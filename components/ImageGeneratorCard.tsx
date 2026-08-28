@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { GoogleGenAI, Modality } from '@google/genai';
+import { ARENA_IMAGE_MODELS, ARENA_FAST_IMAGE_MODEL_ID, DEFAULT_ARENA_IMAGE_MODEL_ID } from '../services/arena/arenaConfig';
+import { arenaEngine } from '../services/arena/arenaEngine';
 import { FrameGeneratorIcon } from './icons/FrameGeneratorIcon';
 import { MicrophoneIcon } from './icons/MicrophoneIcon';
 import { SaveIcon } from './icons/SaveIcon';
@@ -28,13 +29,37 @@ declare global {
   }
 }
 
+interface SpeechRecognitionResultItem {
+  transcript: string;
+}
+
+interface SpeechRecognitionResult {
+  [index: number]: SpeechRecognitionResultItem;
+  isFinal: boolean;
+}
+
+interface SpeechRecognitionResultList {
+  [index: number]: SpeechRecognitionResult;
+  length: number;
+}
+
+interface SpeechRecognitionEvent {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+  message?: string;
+}
+
 interface SpeechRecognition {
   continuous: boolean;
   lang: string;
   interimResults: boolean;
   maxAlternatives: number;
-  onresult: (event: any) => void;
-  onerror: (event: any) => void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
   onend: () => void;
   start: () => void;
   stop: () => void;
@@ -88,11 +113,13 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const [editPrompt, setEditPrompt] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedGenerationModel, setSelectedGenerationModel] = useState('imagen-4.0-generate-001');
+  const [selectedGenerationModel, setSelectedGenerationModel] = useState<string>(DEFAULT_ARENA_IMAGE_MODEL_ID);
   const [isEnhancing, setIsEnhancing] = useState<boolean>(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [engineMode, setEngineMode] = useState<'live' | 'simulation' | null>(null);
 
-  const isImagenModel = selectedGenerationModel === 'imagen-4.0-generate-001';
+  const selectedModelCapabilities = ARENA_IMAGE_MODELS.find(m => m.id === selectedGenerationModel)?.capabilities ?? ARENA_IMAGE_MODELS[0].capabilities;
+  const arenaStatus = arenaEngine.status();
   const isAiBusy = isLoading || isUpscaling || isEditing || isEnhancing;
 
   useImperativeHandle(ref, () => ({
@@ -115,6 +142,7 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
       setEditHistory([]);
       setHistoryIndex(-1);
       setActivePreset(null);
+      setEngineMode(null);
       props.promptInputRef.current?.focus();
     }
   }));
@@ -178,10 +206,10 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
   }, []);
 
   const presets = [
-    { name: 'Cinematic Anime', model: 'imagen-4.0-generate-001', keywords: 'masterpiece, cel-shaded, vibrant colors, detailed background, cinematic lighting', negative: 'low quality, blurry, text, watermark', aspect: '16:9' as AspectRatio },
-    { name: 'Photorealistic', model: 'imagen-4.0-generate-001', keywords: 'photorealistic, 8K, sharp focus, high detail, professional photograph', negative: 'drawing, painting, illustration, cartoon', aspect: '4:3' as AspectRatio },
-    { name: 'Cyberpunk Concept', model: 'imagen-4.0-generate-001', keywords: 'cyberpunk concept art, neon lighting, futuristic, dystopian, gritty', negative: 'clean, bright, utopian', aspect: '16:9' as AspectRatio },
-    { name: 'Vintage Comic', model: 'imagen-4.0-generate-001', keywords: 'vintage comic book art, halftone dots, bold lines, limited color palette', negative: 'photorealistic, 3D render', aspect: '3:4' as AspectRatio },
+    { name: 'Cinematic Anime', model: DEFAULT_ARENA_IMAGE_MODEL_ID, keywords: 'masterpiece, cel-shaded, vibrant colors, detailed background, cinematic lighting', negative: 'low quality, blurry, text, watermark', aspect: '16:9' as AspectRatio },
+    { name: 'Photorealistic', model: DEFAULT_ARENA_IMAGE_MODEL_ID, keywords: 'photorealistic, 8K, sharp focus, high detail, professional photograph', negative: 'drawing, painting, illustration, cartoon', aspect: '4:3' as AspectRatio },
+    { name: 'Cyberpunk Concept', model: DEFAULT_ARENA_IMAGE_MODEL_ID, keywords: 'cyberpunk concept art, neon lighting, futuristic, dystopian, gritty', negative: 'clean, bright, utopian', aspect: '16:9' as AspectRatio },
+    { name: 'Vintage Comic', model: DEFAULT_ARENA_IMAGE_MODEL_ID, keywords: 'vintage comic book art, halftone dots, bold lines, limited color palette', negative: 'photorealistic, 3D render', aspect: '3:4' as AspectRatio },
   ];
 
   useEffect(() => {
@@ -201,11 +229,11 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
   
   useEffect(() => {
     // When switching to a model that doesn't support certain features, disable them.
-    if (!isImagenModel) {
+    if (!selectedModelCapabilities.negativePrompt) {
       setShowFineTune(false);
       setNegativePrompt('');
     }
-  }, [selectedGenerationModel, isImagenModel]);
+  }, [selectedGenerationModel, selectedModelCapabilities]);
   
   const applyEdit = (edit: Partial<Omit<EditState, 'imageUrl'>> & { imageUrl?: string }) => {
     const current = editHistory[historyIndex];
@@ -265,63 +293,22 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
     setHistoryIndex(-1);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      let imageUrl: string | null = null;
+      const result = await arenaEngine.generateImage({
+        model: selectedGenerationModel,
+        prompt: prompt.trim(),
+        negativePrompt: selectedModelCapabilities.negativePrompt && negativePrompt.trim() ? negativePrompt.trim() : undefined,
+        aspectRatio: selectedModelCapabilities.aspectRatio ? aspectRatio : undefined,
+      });
+      setEngineMode(result.mode);
+      setGeneratedImage(result.image);
+      setOriginalImage(result.image);
+      setActivePrompt(prompt);
+      setActiveAspectRatio(aspectRatio);
+      props.onImageGenerated(result.image);
 
-      if (!isImagenModel) { // Gemini Flash model
-        const textPart = { text: prompt };
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image-preview',
-          contents: { parts: [textPart] },
-          config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
-        });
-        const imagePartData = response?.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
-        if (imagePartData?.inlineData) {
-          const base64ImageBytes: string = imagePartData.inlineData.data;
-          imageUrl = `data:image/png;base64,${base64ImageBytes}`;
-        }
-      } else { // Imagen model
-        const apiConfig: {
-          numberOfImages: number;
-          outputMimeType: string;
-          aspectRatio: AspectRatio;
-          negativePrompt?: string;
-        } = {
-          numberOfImages: 1,
-          outputMimeType: 'image/png',
-          aspectRatio: aspectRatio,
-        };
-
-        if (negativePrompt.trim()) {
-          apiConfig.negativePrompt = negativePrompt.trim();
-        }
-
-        const response = await ai.models.generateImages({
-          model: 'imagen-4.0-generate-001',
-          prompt: prompt,
-          config: apiConfig,
-        });
-
-        if (response.generatedImages && response.generatedImages.length > 0) {
-          const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
-          imageUrl = `data:image/png;base64,${base64ImageBytes}`;
-        }
-      }
-
-      if (imageUrl) {
-        setGeneratedImage(imageUrl);
-        setOriginalImage(imageUrl);
-        setActivePrompt(prompt);
-        setActiveAspectRatio(aspectRatio);
-        props.onImageGenerated(imageUrl);
-        
-        const initialEditState: EditState = { imageUrl, rotation: 0, filter: 'none' };
-        setEditHistory([initialEditState]);
-        setHistoryIndex(0);
-
-      } else {
-         setError('No image was generated. Please try a different prompt.');
-      }
+      const initialEditState: EditState = { imageUrl: result.image, rotation: 0, filter: 'none' };
+      setEditHistory([initialEditState]);
+      setHistoryIndex(0);
     } catch (e) {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -349,29 +336,19 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
     setHistoryIndex(-1);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
+      const result = await arenaEngine.generateImage({
+        model: selectedGenerationModel,
         prompt: activePrompt,
-        config: {
-          numberOfImages: 1,
-          outputMimeType: 'image/png',
-          aspectRatio: activeAspectRatio || '1:1',
-          negativePrompt: negativePrompt,
-        },
+        negativePrompt: selectedModelCapabilities.negativePrompt && negativePrompt.trim() ? negativePrompt.trim() : undefined,
+        aspectRatio: activeAspectRatio || '1:1',
       });
-       if (response.generatedImages && response.generatedImages.length > 0) {
-        const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
-        const imageUrl = `data:image/png;base64,${base64ImageBytes}`;
-        setGeneratedImage(imageUrl);
-        setOriginalImage(imageUrl);
-        props.onImageGenerated(imageUrl);
-        const initialEditState: EditState = { imageUrl, rotation: 0, filter: 'none' };
-        setEditHistory([initialEditState]);
-        setHistoryIndex(0);
-      } else {
-         setError('Could not refine image. Please try again.');
-      }
+      setEngineMode(result.mode);
+      setGeneratedImage(result.image);
+      setOriginalImage(result.image);
+      props.onImageGenerated(result.image);
+      const initialEditState: EditState = { imageUrl: result.image, rotation: 0, filter: 'none' };
+      setEditHistory([initialEditState]);
+      setHistoryIndex(0);
     } catch (e) {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -399,40 +376,21 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
     setHistoryIndex(-1);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      
-      const apiConfig: {
-        numberOfImages: number;
-        outputMimeType: string;
-        aspectRatio: AspectRatio;
-        negativePrompt?: string;
-      } = {
-        numberOfImages: 1,
-        outputMimeType: 'image/png',
-        aspectRatio: activeAspectRatio || '1:1',
-      };
-      
-      if (negativePrompt.trim()) {
-        apiConfig.negativePrompt = negativePrompt.trim();
-      }
-
-      const response = await ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
+      const result = await arenaEngine.generateImage({
+        model: selectedGenerationModel,
         prompt: activePrompt,
-        config: apiConfig,
+        negativePrompt: selectedModelCapabilities.negativePrompt && negativePrompt.trim() ? negativePrompt.trim() : undefined,
+        aspectRatio: activeAspectRatio || '1:1',
+        // A fresh seed per request steers the model away from the previous render.
+        seed: Math.floor(Math.random() * 2_147_483_647),
       });
-      if (response.generatedImages && response.generatedImages.length > 0) {
-        const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
-        const imageUrl = `data:image/png;base64,${base64ImageBytes}`;
-        setGeneratedImage(imageUrl);
-        setOriginalImage(imageUrl);
-        props.onImageGenerated(imageUrl);
-        const initialEditState: EditState = { imageUrl, rotation: 0, filter: 'none' };
-        setEditHistory([initialEditState]);
-        setHistoryIndex(0);
-      } else {
-         setError('Could not generate variations. Please try again.');
-      }
+      setEngineMode(result.mode);
+      setGeneratedImage(result.image);
+      setOriginalImage(result.image);
+      props.onImageGenerated(result.image);
+      const initialEditState: EditState = { imageUrl: result.image, rotation: 0, filter: 'none' };
+      setEditHistory([initialEditState]);
+      setHistoryIndex(0);
     } catch (e) {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -451,35 +409,10 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
     setError(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const imagePart = {
-        inlineData: {
-          data: originalImage.split(',')[1],
-          mimeType: 'image/png',
-        },
-      };
-      const textPart = {
-        text: 'Upscale this image to a higher resolution. Enhance the details, clarity, and sharpness without altering the content or style.',
-      };
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image-preview',
-        contents: { parts: [imagePart, textPart] },
-        config: {
-          responseModalities: [Modality.IMAGE, Modality.TEXT],
-        },
-      });
-
-      const imagePartData = response?.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
-
-      if (imagePartData?.inlineData) {
-        const base64ImageBytes: string = imagePartData.inlineData.data;
-        const imageUrl = `data:image/png;base64,${base64ImageBytes}`;
-        setUpscaledImage(imageUrl);
-        setShowUpscaled(true);
-      } else {
-        setError('Upscaling failed. The AI did not return an image.');
-      }
+      const result = await arenaEngine.upscaleImage({ image: originalImage, model: ARENA_FAST_IMAGE_MODEL_ID });
+      setEngineMode(result.mode);
+      setUpscaledImage(result.image);
+      setShowUpscaled(true);
     } catch (e) {
       console.error('Upscaling failed:', e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -498,32 +431,14 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
     setError(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const imagePart = {
-        inlineData: {
-          data: generatedImage.split(',')[1],
-          mimeType: 'image/png',
-        },
-      };
-      const textPart = { text: editPrompt };
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image-preview',
-        contents: { parts: [imagePart, textPart] },
-        config: {
-          responseModalities: [Modality.IMAGE, Modality.TEXT],
-        },
+      const result = await arenaEngine.editImage({
+        model: ARENA_FAST_IMAGE_MODEL_ID,
+        image: generatedImage,
+        prompt: editPrompt.trim(),
       });
-      
-      const imagePartData = response?.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
-
-      if (imagePartData?.inlineData) {
-        const base64ImageBytes: string = imagePartData.inlineData.data;
-        const imageUrl = `data:image/png;base64,${base64ImageBytes}`;
-        applyEdit({ imageUrl });
-        setEditPrompt('');
-      } else {
-        setError('Generative edit failed. The AI did not return an image.');
-      }
+      setEngineMode(result.mode);
+      applyEdit({ imageUrl: result.image });
+      setEditPrompt('');
     } catch (e) {
       console.error('Generative edit failed:', e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -541,16 +456,9 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
     setIsEnhancing(true);
     setError(null);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const systemInstruction = "You are an AI prompt engineer. Your task is to enhance the user's prompt for an image generator. Keep the original subject, but make it more vivid and artistic by adding details about lighting, environment, and composition. Suggest a compelling artistic style if one isn't specified. Return only the new prompt as a single line of text.";
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: `Original prompt: "${prompt}"`,
-        config: {
-          systemInstruction: systemInstruction,
-        }
-      });
-      setPrompt(response.text.trim());
+      const { prompt: enhancedPrompt, mode } = await arenaEngine.enhancePrompt({ prompt: prompt.trim() });
+      setEngineMode(mode);
+      setPrompt(enhancedPrompt);
     } catch (e) {
       console.error('Prompt enhancement failed:', e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -781,10 +689,7 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
     { name: 'Vintage', value: 'sepia(60%) contrast(110%) brightness(90%) saturation(1.2)' },
     { name: 'Cyber', value: 'hue-rotate(180deg) saturate(200%)' },
   ];
-  const generationModels = [
-    { id: 'imagen-4.0-generate-001', name: 'Imagen 4.0', description: 'Highest quality generation.' },
-    { id: 'gemini-2.5-flash-image-preview', name: 'Gemini (Nano Banana)', description: 'Fast generation & in-painting edits.' },
-  ];
+  const generationModels = ARENA_IMAGE_MODELS;
   const styleKeywords = ['Photorealistic', 'Cyberpunk', 'Anime Style', 'Oil Painting', 'Comic Book Art', 'Low Poly', 'Cinematic Lighting', '4K'];
   const promptTemplates = [
     { name: 'Detailed Scene', value: 'A [adjective] [subject] in a [setting], [action], [style].' },
@@ -840,18 +745,25 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
                 </div>
                 <button onClick={handleResetEdits} disabled={isAiBusy} className="p-1.5 text-slate-300 hover:text-cyan-400 disabled:text-slate-600 transition-colors rounded-md" title="Reset Edits"><ResetIcon className="w-5 h-5" /></button>
               </div>
-              {upscaledImage && (
-                <button
-                  onClick={() => setShowUpscaled(prev => !prev)}
-                  className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors border ${
-                    showUpscaled
-                      ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300'
-                      : 'bg-slate-900/50 border-slate-700 text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  {showUpscaled ? 'Show Original' : 'Show Upscaled'}
-                </button>
-              )}
+              <div className="flex flex-col items-end gap-2">
+                {generatedImage && engineMode === 'simulation' && (
+                  <span className="px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/40 rounded-md" title="Generated by the local Arena simulation engine. Set ARENA_API_KEY in .env to use live Arena models.">
+                    Local Simulation
+                  </span>
+                )}
+                {upscaledImage && (
+                  <button
+                    onClick={() => setShowUpscaled(prev => !prev)}
+                    className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors border ${
+                      showUpscaled
+                        ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300'
+                        : 'bg-slate-900/50 border-slate-700 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    {showUpscaled ? 'Show Original' : 'Show Upscaled'}
+                  </button>
+                )}
+              </div>
             </div>
              {/* Generative Edit */}
             <div className="absolute bottom-2 left-2 right-2 z-10">
@@ -903,8 +815,8 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
               {copyStatus === 'copied' ? <CheckIcon className="w-4 h-4 text-green-400" /> : <CopyIcon className="w-4 h-4" />}
               {copyStatus === 'copied' ? 'Copied!' : 'Copy'}
             </button>
-            <button onClick={handleRefineImage} disabled={isAiBusy || !isImagenModel} className="flex items-center justify-center gap-2 p-2 bg-slate-700/50 hover:bg-slate-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><RotateIcon className="w-4 h-4" />Refine</button>
-            <button onClick={handleGenerateVariations} disabled={isAiBusy || !isImagenModel} className="flex items-center justify-center gap-2 p-2 bg-slate-700/50 hover:bg-slate-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><VariationsIcon className="w-4 h-4" />Variations</button>
+            <button onClick={handleRefineImage} disabled={isAiBusy || !selectedModelCapabilities.refinement} className="flex items-center justify-center gap-2 p-2 bg-slate-700/50 hover:bg-slate-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><RotateIcon className="w-4 h-4" />Refine</button>
+            <button onClick={handleGenerateVariations} disabled={isAiBusy || !selectedModelCapabilities.refinement} className="flex items-center justify-center gap-2 p-2 bg-slate-700/50 hover:bg-slate-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><VariationsIcon className="w-4 h-4" />Variations</button>
             <button onClick={handleUpscaleImage} disabled={isAiBusy || upscaledImage !== null} className="flex items-center justify-center gap-2 p-2 bg-slate-700/50 hover:bg-slate-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {isUpscaling ? <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : <UpscaleIcon className="w-4 h-4" />}
               {upscaledImage ? 'Upscaled' : 'Upscale'}
@@ -933,7 +845,7 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
       )}
       
       {/* Pre-Generation Presets */}
-      {!generatedImage && isImagenModel && (
+      {!generatedImage && selectedModelCapabilities.negativePrompt && (
         <div>
           <p className="text-xs text-slate-400 mb-2 font-semibold">Style Presets</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -1018,12 +930,12 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
         <div className="space-y-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700/50">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <div>
-              <label htmlFor="negative-prompt" className={`block text-sm font-medium mb-1 ${isImagenModel ? 'text-slate-300' : 'text-slate-500'}`}>Negative Prompt</label>
-              <input id="negative-prompt" type="text" value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} className="w-full bg-slate-800 border border-slate-600 rounded-md p-2 text-sm text-slate-200 focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-slate-800/50 disabled:text-slate-500" placeholder="e.g., blurry, watermark, text" disabled={isAiBusy || !isImagenModel}/>
+              <label htmlFor="negative-prompt" className={`block text-sm font-medium mb-1 ${selectedModelCapabilities.negativePrompt ? 'text-slate-300' : 'text-slate-500'}`}>Negative Prompt</label>
+              <input id="negative-prompt" type="text" value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} className="w-full bg-slate-800 border border-slate-600 rounded-md p-2 text-sm text-slate-200 focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-slate-800/50 disabled:text-slate-500" placeholder="e.g., blurry, watermark, text" disabled={isAiBusy || !selectedModelCapabilities.negativePrompt}/>
             </div>
             <div>
-              <label htmlFor="aspect-ratio" className={`block text-sm font-medium mb-1 ${isImagenModel ? 'text-slate-300' : 'text-slate-500'}`}>Aspect Ratio</label>
-              <select id="aspect-ratio" value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value as AspectRatio)} disabled={isAiBusy || !isImagenModel} className="w-full bg-slate-800 border border-slate-600 rounded-md p-2 text-sm text-slate-200 focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-slate-800/50 disabled:text-slate-500">
+              <label htmlFor="aspect-ratio" className={`block text-sm font-medium mb-1 ${selectedModelCapabilities.aspectRatio ? 'text-slate-300' : 'text-slate-500'}`}>Aspect Ratio</label>
+              <select id="aspect-ratio" value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value as AspectRatio)} disabled={isAiBusy || !selectedModelCapabilities.aspectRatio} className="w-full bg-slate-800 border border-slate-600 rounded-md p-2 text-sm text-slate-200 focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-slate-800/50 disabled:text-slate-500">
                 <option value="1:1">1:1 (Square)</option>
                 <option value="16:9">16:9 (Widescreen)</option>
                 <option value="9:16">9:16 (Portrait)</option>
@@ -1045,6 +957,15 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
           </div>
         </div>
       )}
+
+      {/* Arena engine status */}
+      <div className="text-center">
+        <p className={`text-[10px] font-mono uppercase tracking-wider ${arenaStatus.mode === 'live' ? 'text-emerald-400/80' : 'text-amber-400/80'}`}>
+          {arenaStatus.mode === 'live'
+            ? `Arena engine online // ${arenaStatus.baseUrl}`
+            : 'Arena engine in local simulation mode // set ARENA_API_KEY in .env for live models'}
+        </p>
+      </div>
 
       {/* Main Action Button */}
       <div className="pt-2">
