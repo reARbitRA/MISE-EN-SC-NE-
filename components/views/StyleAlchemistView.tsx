@@ -4,6 +4,7 @@ import { StyleAlchemistIcon } from '../icons/StyleAlchemistIcon';
 import { SparklesIcon } from '../icons/SparklesIcon';
 import { CopyIcon } from '../icons/CopyIcon';
 import { CheckIcon } from '../icons/CheckIcon';
+import PromptForgeDock from '../promptforge/PromptForgeDock';
 import { PlusIcon } from '../icons/PlusIcon';
 import { ExportIcon } from '../icons/ExportIcon';
 import { AlertIcon } from '../icons/AlertIcon';
@@ -343,14 +344,21 @@ Return a creative palette name, description, and exactly 5 colors with accurate 
             <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
               Rough Scene Idea / Character Action
             </label>
-            <input
-              type="text"
+            <PromptForgeDock
+              domain="style-scene"
               value={rawIdea}
-              onChange={(e) => setRawIdea(e.target.value)}
-              placeholder="e.g. Kaira hacking a neon vending machine while rain pours on her jacket"
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500 focus:outline-none"
-              onKeyDown={(e) => e.key === 'Enter' && handleSynthesizePrompts()}
-            />
+              onApply={setRawIdea}
+              hints={[`art direction: ${selectedStylePreset}`]}
+            >
+              <input
+                type="text"
+                value={rawIdea}
+                onChange={(e) => setRawIdea(e.target.value)}
+                placeholder="e.g. Kaira hacking a neon vending machine while rain pours on her jacket"
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 pr-9 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                onKeyDown={(e) => e.key === 'Enter' && handleSynthesizePrompts()}
+              />
+            </PromptForgeDock>
           </div>
 
           <div>
@@ -610,14 +618,16 @@ Return a creative palette name, description, and exactly 5 colors with accurate 
             <SparklesIcon className="w-4 h-4" />
             <span>AI Palette Synthesizer:</span>
           </div>
-          <input
-            type="text"
-            value={paletteTheme}
-            onChange={(e) => setPaletteTheme(e.target.value)}
-            placeholder="e.g. Acid Neon Monsoon, Underground Cyber-Bazaar, Corporate Boardroom"
-            className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
-            onKeyDown={(e) => e.key === 'Enter' && handleGenerateAiPalette()}
-          />
+          <PromptForgeDock domain="style-palette" value={paletteTheme} onApply={setPaletteTheme} className="flex-1 min-w-0">
+            <input
+              type="text"
+              value={paletteTheme}
+              onChange={(e) => setPaletteTheme(e.target.value)}
+              placeholder="e.g. Acid Neon Monsoon, Underground Cyber-Bazaar, Corporate Boardroom"
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 pr-9 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+              onKeyDown={(e) => e.key === 'Enter' && handleGenerateAiPalette()}
+            />
+          </PromptForgeDock>
           <button
             onClick={handleGenerateAiPalette}
             disabled={isGeneratingPalette}

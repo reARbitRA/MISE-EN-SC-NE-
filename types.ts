@@ -259,3 +259,65 @@ export interface ArenaChatApiResponse {
   choices?: { message?: { content?: string }; finish_reason?: string }[];
   error?: ArenaApiErrorBody;
 }
+
+// ==========================================================================
+// PROMPTFORGE — the studio-wide prompt refinement engine
+// ==========================================================================
+
+/** Authoring domains the engine understands (one per kind of writing field). */
+export type PromptForgeDomain =
+  | 'image-prompt'
+  | 'image-negative'
+  | 'image-variation'
+  | 'character-visual'
+  | 'character-backstory'
+  | 'lore-description'
+  | 'lore-secret'
+  | 'style-scene'
+  | 'style-palette'
+  | 'soundtrack-score'
+  | 'dialogue-scene'
+  | 'dialogue-bubble'
+  | 'story-logline';
+
+/** How hard the forge leans into enrichment. */
+export type PromptForgeIntensity = 'polish' | 'amplify' | 'overdrive';
+
+/** One clarifying question the engine asks before forging. */
+export interface PromptForgeQuestion {
+  id: string;
+  text: string;
+  why: string;
+  suggestions: string[];
+}
+
+/** Deterministic read of a rough draft. */
+export interface PromptForgeAnalysis {
+  wordCount: number;
+  coveredDimensions: string[];
+  missingDimensions: string[];
+  coreTerms: string[];
+}
+
+/** A single line in the "what changed" review. */
+export interface PromptForgeChangeNote {
+  label: string;
+  detail: string;
+}
+
+/** Verdict of the term-preservation guardian. */
+export interface PromptForgeGuardian {
+  preservedTerms: string[];
+  droppedTerms: string[];
+}
+
+/** Final forged output, regardless of engine mode. */
+export interface PromptForgeResult {
+  text: string;
+  mode: 'live' | 'local';
+  intensity: PromptForgeIntensity;
+  changeNotes: PromptForgeChangeNote[];
+  guardian: PromptForgeGuardian;
+  /** Set when a live attempt failed and the local forge took over. */
+  notice?: string;
+}

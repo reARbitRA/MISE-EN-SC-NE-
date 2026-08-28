@@ -3,6 +3,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { SoundtrackComposerIcon } from '../icons/SoundtrackComposerIcon';
 import { SparklesIcon } from '../icons/SparklesIcon';
 import { CheckIcon } from '../icons/CheckIcon';
+import PromptForgeDock from '../promptforge/PromptForgeDock';
 import { AlertIcon } from '../icons/AlertIcon';
 import { SoundtrackTrack } from '../../types';
 import type { ActivityItemProps } from '../ContextualSmartPanel';
@@ -559,14 +560,16 @@ Return a JSON object with:
         </p>
 
         <div className="flex gap-2">
-          <input
-            type="text"
-            value={sceneConcept}
-            onChange={(e) => setSceneConcept(e.target.value)}
-            placeholder="e.g. Final rooftop confrontation between Kaira and Vespera under torrential thunderstorm"
-            className="flex-1 bg-[#0A0A0F] border-2 border-[#2E2E3A] px-3 py-2 font-mono text-xs text-[#F0EBE1] focus:border-[#00E5FF] focus:outline-none"
-            onKeyDown={(e) => e.key === 'Enter' && handleAiComposeScore()}
-          />
+          <PromptForgeDock domain="soundtrack-score" value={sceneConcept} onApply={setSceneConcept} className="flex-1 min-w-0">
+            <input
+              type="text"
+              value={sceneConcept}
+              onChange={(e) => setSceneConcept(e.target.value)}
+              placeholder="e.g. Final rooftop confrontation between Kaira and Vespera under torrential thunderstorm"
+              className="w-full bg-[#0A0A0F] border-2 border-[#2E2E3A] px-3 py-2 pr-9 font-mono text-xs text-[#F0EBE1] focus:border-[#00E5FF] focus:outline-none"
+              onKeyDown={(e) => e.key === 'Enter' && handleAiComposeScore()}
+            />
+          </PromptForgeDock>
           <button
             onClick={handleAiComposeScore}
             disabled={isComposingAiScore || !sceneConcept.trim()}

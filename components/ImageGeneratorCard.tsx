@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { ARENA_IMAGE_MODELS, ARENA_FAST_IMAGE_MODEL_ID, DEFAULT_ARENA_IMAGE_MODEL_ID } from '../services/arena/arenaConfig';
 import { arenaEngine } from '../services/arena/arenaEngine';
+import PromptForgeDock from './promptforge/PromptForgeDock';
 import { FrameGeneratorIcon } from './icons/FrameGeneratorIcon';
 import { MicrophoneIcon } from './icons/MicrophoneIcon';
 import { SaveIcon } from './icons/SaveIcon';
@@ -16,7 +17,6 @@ import { UndoIcon } from './icons/UndoIcon';
 import { RedoIcon } from './icons/RedoIcon';
 import { StyleAlchemistIcon } from './icons/StyleAlchemistIcon';
 import { AlertIcon } from './icons/AlertIcon';
-import { SparklesIcon } from './icons/SparklesIcon';
 import { TemplateIcon } from './icons/TemplateIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
 import { CopyIcon } from './icons/CopyIcon';
@@ -114,13 +114,12 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
   const [editPrompt, setEditPrompt] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [selectedGenerationModel, setSelectedGenerationModel] = useState<string>(DEFAULT_ARENA_IMAGE_MODEL_ID);
-  const [isEnhancing, setIsEnhancing] = useState<boolean>(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [engineMode, setEngineMode] = useState<'live' | 'simulation' | null>(null);
 
   const selectedModelCapabilities = ARENA_IMAGE_MODELS.find(m => m.id === selectedGenerationModel)?.capabilities ?? ARENA_IMAGE_MODELS[0].capabilities;
   const arenaStatus = arenaEngine.status();
-  const isAiBusy = isLoading || isUpscaling || isEditing || isEnhancing;
+  const isAiBusy = isLoading || isUpscaling || isEditing;
 
   useImperativeHandle(ref, () => ({
     reset() {
@@ -448,26 +447,6 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
     }
   };
 
-  const handleEnhancePrompt = async () => {
-    if (!prompt.trim()) {
-      setError('Please enter a prompt to enhance.');
-      return;
-    }
-    setIsEnhancing(true);
-    setError(null);
-    try {
-      const { prompt: enhancedPrompt, mode } = await arenaEngine.enhancePrompt({ prompt: prompt.trim() });
-      setEngineMode(mode);
-      setPrompt(enhancedPrompt);
-    } catch (e) {
-      console.error('Prompt enhancement failed:', e);
-      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      setError(`Failed to enhance prompt. ${errorMessage}`);
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
-
   const handleSaveCreation = () => {
     if (!generatedImage || !prompt) return;
 
@@ -767,23 +746,31 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
             </div>
              {/* Generative Edit */}
             <div className="absolute bottom-2 left-2 right-2 z-10">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={editPrompt}
-                  onChange={(e) => setEditPrompt(e.target.value)}
-                  placeholder="Describe an edit, e.g., 'add a hat on the character'"
-                  disabled={isAiBusy}
-                  className="w-full bg-slate-900/60 backdrop-blur-md border border-slate-700 rounded-lg p-2.5 pr-20 text-sm focus:ring-1 focus:ring-fuchsia-500 focus:border-fuchsia-500"
-                />
-                <button
-                  onClick={handleGenerativeEdit}
-                  disabled={isAiBusy || !editPrompt}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 text-sm font-semibold bg-fuchsia-600/80 hover:bg-fuchsia-600 text-white rounded-md disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
-                >
-                  {isEditing ? 'Editing...' : 'Apply'}
-                </button>
-              </div>
+              <PromptForgeDock
+                domain="image-variation"
+                value={editPrompt}
+                onApply={setEditPrompt}
+                disabled={isAiBusy}
+                corner="above-right"
+              >
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={editPrompt}
+                    onChange={(e) => setEditPrompt(e.target.value)}
+                    placeholder="Describe an edit, e.g., 'add a hat on the character'"
+                    disabled={isAiBusy}
+                    className="w-full bg-slate-900/60 backdrop-blur-md border border-slate-700 rounded-lg p-2.5 pr-20 text-sm focus:ring-1 focus:ring-fuchsia-500 focus:border-fuchsia-500"
+                  />
+                  <button
+                    onClick={handleGenerativeEdit}
+                    disabled={isAiBusy || !editPrompt}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 text-sm font-semibold bg-fuchsia-600/80 hover:bg-fuchsia-600 text-white rounded-md disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isEditing ? 'Editing...' : 'Apply'}
+                  </button>
+                </div>
+              </PromptForgeDock>
             </div>
           </>
         ) : error ? (
@@ -868,34 +855,38 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
       )}
 
       {/* Prompt Input */}
-      <div className="relative">
-        <textarea
-          ref={props.promptInputRef}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          className="w-full bg-slate-800 border border-slate-600 rounded-md p-3 pr-32 text-slate-200 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors resize-none disabled:bg-slate-700/50"
-          rows={3}
-          placeholder="e.g., A cyberpunk city street at night..."
-          disabled={isAiBusy}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-              handleGenerateImage();
-            }
-          }}
-        />
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
-           <button onClick={() => setIsTemplateDropdownOpen(prev => !prev)} disabled={isAiBusy} className="p-1.5 text-slate-400 rounded-md hover:bg-slate-700 hover:text-cyan-400 disabled:text-slate-600 disabled:hover:bg-transparent transition-colors" aria-label="Prompt Templates" title="Prompt Templates">
-            <TemplateIcon className="w-5 h-5" />
-          </button>
-           <button onClick={handleEnhancePrompt} disabled={isAiBusy || !prompt} className="p-1.5 text-slate-400 rounded-md hover:bg-slate-700 hover:text-cyan-400 disabled:text-slate-600 disabled:hover:bg-transparent transition-colors" aria-label="Enhance Prompt" title="Enhance Prompt">
-            {isEnhancing ? (<svg className="animate-spin h-5 w-5 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>) : (<SparklesIcon className="w-5 h-5" />)}
-          </button>
-          {isSpeechRecognitionSupported && (
-            <button onClick={handleToggleRecording} disabled={isAiBusy} className={`p-1.5 rounded-md transition-colors ${isRecording ? 'text-red-500 bg-red-900/50' : 'text-slate-400 hover:bg-slate-700 hover:text-cyan-400'} disabled:text-slate-600 disabled:hover:bg-transparent`} aria-label={isRecording ? 'Stop Recording' : 'Start Voice-to-Text'} title={isRecording ? 'Stop Recording' : 'Start Voice-to-Text'}>
-              <MicrophoneIcon className="w-5 h-5" />
+      <PromptForgeDock
+        domain="image-prompt"
+        value={prompt}
+        onApply={setPrompt}
+        disabled={isAiBusy}
+        hints={['cyberpunk graphic novel frame']}
+      >
+        <div className="relative">
+          <textarea
+            ref={props.promptInputRef}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-600 rounded-md p-3 pr-32 pb-9 text-slate-200 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors resize-none disabled:bg-slate-700/50"
+            rows={3}
+            placeholder="e.g., A cyberpunk city street at night..."
+            disabled={isAiBusy}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                handleGenerateImage();
+              }
+            }}
+          />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+             <button onClick={() => setIsTemplateDropdownOpen(prev => !prev)} disabled={isAiBusy} className="p-1.5 text-slate-400 rounded-md hover:bg-slate-700 hover:text-cyan-400 disabled:text-slate-600 disabled:hover:bg-transparent transition-colors" aria-label="Prompt Templates" title="Prompt Templates">
+              <TemplateIcon className="w-5 h-5" />
             </button>
-          )}
-        </div>
+            {isSpeechRecognitionSupported && (
+              <button onClick={handleToggleRecording} disabled={isAiBusy} className={`p-1.5 rounded-md transition-colors ${isRecording ? 'text-red-500 bg-red-900/50' : 'text-slate-400 hover:bg-slate-700 hover:text-cyan-400'} disabled:text-slate-600 disabled:hover:bg-transparent`} aria-label={isRecording ? 'Stop Recording' : 'Start Voice-to-Text'} title={isRecording ? 'Stop Recording' : 'Start Voice-to-Text'}>
+                <MicrophoneIcon className="w-5 h-5" />
+              </button>
+            )}
+          </div>
         {isTemplateDropdownOpen && (
           <div ref={templateDropdownRef} className="absolute top-full left-0 mt-2 w-full bg-slate-800 border border-slate-700 rounded-md shadow-lg z-20 p-2">
             {promptTemplates.map(template => (
@@ -906,7 +897,8 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
             ))}
           </div>
         )}
-      </div>
+        </div>
+      </PromptForgeDock>
 
       {/* Style keywords */}
       <div className="py-2">
@@ -931,7 +923,14 @@ const ImageGeneratorCard = forwardRef<ImageGeneratorCardRef, ImageGeneratorCardP
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <div>
               <label htmlFor="negative-prompt" className={`block text-sm font-medium mb-1 ${selectedModelCapabilities.negativePrompt ? 'text-slate-300' : 'text-slate-500'}`}>Negative Prompt</label>
-              <input id="negative-prompt" type="text" value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} className="w-full bg-slate-800 border border-slate-600 rounded-md p-2 text-sm text-slate-200 focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-slate-800/50 disabled:text-slate-500" placeholder="e.g., blurry, watermark, text" disabled={isAiBusy || !selectedModelCapabilities.negativePrompt}/>
+              <PromptForgeDock
+                domain="image-negative"
+                value={negativePrompt}
+                onApply={setNegativePrompt}
+                disabled={isAiBusy || !selectedModelCapabilities.negativePrompt}
+              >
+                <input id="negative-prompt" type="text" value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} className="w-full bg-slate-800 border border-slate-600 rounded-md p-2 pr-9 text-sm text-slate-200 focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-slate-800/50 disabled:text-slate-500" placeholder="e.g., blurry, watermark, text" disabled={isAiBusy || !selectedModelCapabilities.negativePrompt}/>
+              </PromptForgeDock>
             </div>
             <div>
               <label htmlFor="aspect-ratio" className={`block text-sm font-medium mb-1 ${selectedModelCapabilities.aspectRatio ? 'text-slate-300' : 'text-slate-500'}`}>Aspect Ratio</label>

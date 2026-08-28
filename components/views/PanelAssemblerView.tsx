@@ -8,6 +8,7 @@ import { DownloadIcon } from '../icons/DownloadIcon';
 import { EditIcon } from '../icons/EditIcon';
 import { CheckIcon } from '../icons/CheckIcon';
 import { AlertIcon } from '../icons/AlertIcon';
+import PromptForgeDock from '../promptforge/PromptForgeDock';
 import { ComicPage, ComicPanelSlot, ComicBubble, PanelLayoutType, Character } from '../../types';
 import type { ActivityItemProps } from '../ContextualSmartPanel';
 
@@ -536,14 +537,16 @@ Specify:
           Describe scene beats and AI will synthesize character dialogue balloons and sound effects.
         </p>
         <div className="flex gap-2">
-          <input
-            type="text"
-            value={dialogueScenePrompt}
-            onChange={(e) => setDialogueScenePrompt(e.target.value)}
-            placeholder="e.g. Kaira confronts Cipher in the neon alley. Gunfire erupts as security drones approach."
-            className="flex-1 bg-[#0A0A0F] border-2 border-[#2E2E3A] px-3 py-2 font-mono text-xs text-[#F0EBE1] focus:border-[#00E5FF] focus:outline-none"
-            onKeyDown={(e) => e.key === 'Enter' && handleAiGenerateDialogue()}
-          />
+          <PromptForgeDock domain="dialogue-scene" value={dialogueScenePrompt} onApply={setDialogueScenePrompt} className="flex-1 min-w-0" hints={[currentPage.title]}>
+            <input
+              type="text"
+              value={dialogueScenePrompt}
+              onChange={(e) => setDialogueScenePrompt(e.target.value)}
+              placeholder="e.g. Kaira confronts Cipher in the neon alley. Gunfire erupts as security drones approach."
+              className="w-full bg-[#0A0A0F] border-2 border-[#2E2E3A] px-3 py-2 pr-9 font-mono text-xs text-[#F0EBE1] focus:border-[#00E5FF] focus:outline-none"
+              onKeyDown={(e) => e.key === 'Enter' && handleAiGenerateDialogue()}
+            />
+          </PromptForgeDock>
           <button
             onClick={handleAiGenerateDialogue}
             disabled={isAiGeneratingDialogue}
@@ -756,18 +759,30 @@ Specify:
 
               <div>
                 <label className="block font-mono text-[11px] font-semibold uppercase text-[#8E8A84] mb-1">Bubble Text</label>
-                <textarea
+                <PromptForgeDock
+                  domain="dialogue-bubble"
                   value={selectedBubble.text}
-                  onChange={(e) => {
-                    const val = e.target.value;
+                  onApply={(next) => {
                     updateCurrentPage((p) => ({
                       ...p,
-                      bubbles: p.bubbles.map((b) => (b.id === selectedBubble.id ? { ...b, text: val } : b)),
+                      bubbles: p.bubbles.map((b) => (b.id === selectedBubble.id ? { ...b, text: next } : b)),
                     }));
                   }}
-                  rows={3}
-                  className="w-full bg-[#0A0A0F] border-2 border-[#2E2E3A] p-2 font-mono text-xs text-[#F0EBE1] focus:border-[#00E5FF] focus:outline-none resize-y"
-                />
+                  hints={[selectedBubble.speaker ?? '', selectedBubble.type]}
+                >
+                  <textarea
+                    value={selectedBubble.text}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      updateCurrentPage((p) => ({
+                        ...p,
+                        bubbles: p.bubbles.map((b) => (b.id === selectedBubble.id ? { ...b, text: val } : b)),
+                      }));
+                    }}
+                    rows={3}
+                    className="w-full bg-[#0A0A0F] border-2 border-[#2E2E3A] p-2 pr-9 font-mono text-xs text-[#F0EBE1] focus:border-[#00E5FF] focus:outline-none resize-y"
+                  />
+                </PromptForgeDock>
               </div>
 
               {/* Position Sliders */}

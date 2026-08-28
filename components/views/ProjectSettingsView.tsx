@@ -4,6 +4,7 @@ import { SaveIcon } from '../icons/SaveIcon';
 import { ExportIcon } from '../icons/ExportIcon';
 import { LoadIcon } from '../icons/LoadIcon';
 import { CheckIcon } from '../icons/CheckIcon';
+import PromptForgeDock from '../promptforge/PromptForgeDock';
 import { AlertIcon } from '../icons/AlertIcon';
 import { ResetIcon } from '../icons/ResetIcon';
 import {
@@ -258,12 +259,19 @@ const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
 
         <div>
           <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Story Logline & Hook</label>
-          <textarea
+          <PromptForgeDock
+            domain="story-logline"
             value={formData.logline}
-            onChange={(e) => setFormData({ ...formData, logline: e.target.value })}
-            rows={3}
-            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500 resize-y"
-          />
+            onApply={(next) => setFormData({ ...formData, logline: next })}
+            hints={[formData.title, formData.subtitle]}
+          >
+            <textarea
+              value={formData.logline}
+              onChange={(e) => setFormData({ ...formData, logline: e.target.value })}
+              rows={3}
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 pr-9 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500 resize-y"
+            />
+          </PromptForgeDock>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

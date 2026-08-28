@@ -6,6 +6,7 @@ import { EditIcon } from '../icons/EditIcon';
 import { DeleteIcon } from '../icons/DeleteIcon';
 import { SaveIcon } from '../icons/SaveIcon';
 import { CancelIcon } from '../icons/CancelIcon';
+import PromptForgeDock from '../promptforge/PromptForgeDock';
 import { SparklesIcon } from '../icons/SparklesIcon';
 import { ExportIcon } from '../icons/ExportIcon';
 import { AlertIcon } from '../icons/AlertIcon';
@@ -405,26 +406,30 @@ ${aiPromptTopic.trim() ? `Specific inspiration/topic: "${aiPromptTopic.trim()}"`
 
           <div>
             <label className="block font-mono text-xs font-semibold uppercase text-[#8E8A84] mb-1">Public Description</label>
-            <textarea
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-              rows={3}
-              placeholder="Atmosphere, history, public perception, sensory details..."
-              className="w-full bg-[#0A0A0F] border-2 border-[#2E2E3A] p-2.5 font-mono text-xs text-[#F0EBE1] focus:border-[#00E5FF] focus:outline-none resize-y"
-            />
+            <PromptForgeDock domain="lore-description" value={newDescription} onApply={setNewDescription} hints={[newCategory]}>
+              <textarea
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                rows={3}
+                placeholder="Atmosphere, history, public perception, sensory details..."
+                className="w-full bg-[#0A0A0F] border-2 border-[#2E2E3A] p-2.5 pr-9 font-mono text-xs text-[#F0EBE1] focus:border-[#00E5FF] focus:outline-none resize-y"
+              />
+            </PromptForgeDock>
           </div>
 
           <div>
             <label className="block font-mono text-xs font-semibold uppercase text-[#FF2244] mb-1">
               Classified Secrets / Comic Plot Hook
             </label>
-            <textarea
-              value={newSecrets}
-              onChange={(e) => setNewSecrets(e.target.value)}
-              rows={2}
-              placeholder="The twist, vulnerability, conspiracy, or key item hidden here..."
-              className="w-full bg-[#0A0A0F] border-2 border-[#FF2244]/60 p-2.5 font-mono text-xs text-[#F0EBE1] focus:border-[#FF2244] focus:outline-none resize-y"
-            />
+            <PromptForgeDock domain="lore-secret" value={newSecrets} onApply={setNewSecrets} hints={[newTitle]}>
+              <textarea
+                value={newSecrets}
+                onChange={(e) => setNewSecrets(e.target.value)}
+                rows={2}
+                placeholder="The twist, vulnerability, conspiracy, or key item hidden here..."
+                className="w-full bg-[#0A0A0F] border-2 border-[#FF2244]/60 p-2.5 pr-9 font-mono text-xs text-[#F0EBE1] focus:border-[#FF2244] focus:outline-none resize-y"
+              />
+            </PromptForgeDock>
           </div>
 
           <div>
@@ -582,22 +587,26 @@ ${aiPromptTopic.trim() ? `Specific inspiration/topic: "${aiPromptTopic.trim()}"`
 
                     <div>
                       <label className="block font-mono text-[11px] font-semibold text-[#8E8A84] mb-1">Description</label>
-                      <textarea
-                        value={editDescription}
-                        onChange={(e) => setEditDescription(e.target.value)}
-                        rows={3}
-                        className="w-full bg-[#0A0A0F] border-2 border-[#2E2E3A] p-2 font-mono text-xs text-[#F0EBE1] focus:border-[#00E5FF] focus:outline-none resize-y"
-                      />
+                      <PromptForgeDock domain="lore-description" value={editDescription} onApply={setEditDescription} hints={[editCategory]}>
+                        <textarea
+                          value={editDescription}
+                          onChange={(e) => setEditDescription(e.target.value)}
+                          rows={3}
+                          className="w-full bg-[#0A0A0F] border-2 border-[#2E2E3A] p-2 pr-9 font-mono text-xs text-[#F0EBE1] focus:border-[#00E5FF] focus:outline-none resize-y"
+                        />
+                      </PromptForgeDock>
                     </div>
 
                     <div>
                       <label className="block font-mono text-[11px] font-semibold text-[#FF2244] mb-1">Secrets / Plot Hook</label>
-                      <textarea
-                        value={editSecrets}
-                        onChange={(e) => setEditSecrets(e.target.value)}
-                        rows={2}
-                        className="w-full bg-[#0A0A0F] border-2 border-[#FF2244]/60 p-2 font-mono text-xs text-[#F0EBE1] focus:border-[#FF2244] focus:outline-none resize-y"
-                      />
+                      <PromptForgeDock domain="lore-secret" value={editSecrets} onApply={setEditSecrets} hints={[editTitle]}>
+                        <textarea
+                          value={editSecrets}
+                          onChange={(e) => setEditSecrets(e.target.value)}
+                          rows={2}
+                          className="w-full bg-[#0A0A0F] border-2 border-[#FF2244]/60 p-2 pr-9 font-mono text-xs text-[#F0EBE1] focus:border-[#FF2244] focus:outline-none resize-y"
+                        />
+                      </PromptForgeDock>
                     </div>
 
                     <div>

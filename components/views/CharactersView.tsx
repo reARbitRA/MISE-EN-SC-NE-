@@ -6,6 +6,7 @@ import { SparklesIcon } from '../icons/SparklesIcon';
 import { ExportIcon } from '../icons/ExportIcon';
 import { AlertIcon } from '../icons/AlertIcon';
 import { CheckIcon } from '../icons/CheckIcon';
+import PromptForgeDock from '../promptforge/PromptForgeDock';
 import { Character } from '../../types';
 import CharacterCard from './CharacterCard';
 import type { ActivityItemProps } from '../ContextualSmartPanel';
@@ -366,24 +367,28 @@ ${aiCustomPrompt.trim() ? `Inspiration: "${aiCustomPrompt.trim()}"` : 'Ensure vi
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block font-mono text-[10px] font-bold uppercase text-[#8E8A84] mb-1">Visual Appearance</label>
-              <textarea
-                value={newVisuals}
-                onChange={(e) => setNewVisuals(e.target.value)}
-                rows={3}
-                placeholder="Clothing, silhouette, scars, hair, chromatic highlights..."
-                className="w-full bg-[#0A0A0F] border border-[#2E2E3A] p-2 font-mono text-xs text-[#F0EBE1] focus:border-[#FF2244] focus:outline-none"
-              />
+              <PromptForgeDock domain="character-visual" value={newVisuals} onApply={setNewVisuals}>
+                <textarea
+                  value={newVisuals}
+                  onChange={(e) => setNewVisuals(e.target.value)}
+                  rows={3}
+                  placeholder="Clothing, silhouette, scars, hair, chromatic highlights..."
+                  className="w-full bg-[#0A0A0F] border border-[#2E2E3A] p-2 pr-9 font-mono text-xs text-[#F0EBE1] focus:border-[#FF2244] focus:outline-none"
+                />
+              </PromptForgeDock>
             </div>
 
             <div>
               <label className="block font-mono text-[10px] font-bold uppercase text-[#8E8A84] mb-1">Backstory & Motivation</label>
-              <textarea
-                value={newBackstory}
-                onChange={(e) => setNewBackstory(e.target.value)}
-                rows={3}
-                placeholder="Origin, grudge against zaibatsu, secret goal..."
-                className="w-full bg-[#0A0A0F] border border-[#2E2E3A] p-2 font-mono text-xs text-[#F0EBE1] focus:border-[#FF2244] focus:outline-none"
-              />
+              <PromptForgeDock domain="character-backstory" value={newBackstory} onApply={setNewBackstory}>
+                <textarea
+                  value={newBackstory}
+                  onChange={(e) => setNewBackstory(e.target.value)}
+                  rows={3}
+                  placeholder="Origin, grudge against zaibatsu, secret goal..."
+                  className="w-full bg-[#0A0A0F] border border-[#2E2E3A] p-2 pr-9 font-mono text-xs text-[#F0EBE1] focus:border-[#FF2244] focus:outline-none"
+                />
+              </PromptForgeDock>
             </div>
           </div>
 

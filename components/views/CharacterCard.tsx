@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Character } from '../../types';
+import PromptForgeDock from '../promptforge/PromptForgeDock';
 import { EditIcon } from '../icons/EditIcon';
 import { DeleteIcon } from '../icons/DeleteIcon';
 import { SaveIcon } from '../icons/SaveIcon';
@@ -224,12 +225,19 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
               <span>⚡ VISUAL PROFILE</span>
             </h5>
             {isEditing ? (
-              <textarea
+              <PromptForgeDock
+                domain="character-visual"
                 value={editedCharacter.visuals}
-                onChange={(e) => handleInputChange('visuals', e.target.value)}
-                rows={2}
-                className="font-sans text-xs text-[#C8C0B8] bg-[#0A0A0F] border border-[#2E2E3A] p-2 w-full resize-y"
-              />
+                onApply={(next) => handleInputChange('visuals', next)}
+                hints={[character.name, character.role ?? '']}
+              >
+                <textarea
+                  value={editedCharacter.visuals}
+                  onChange={(e) => handleInputChange('visuals', e.target.value)}
+                  rows={2}
+                  className="font-sans text-xs text-[#C8C0B8] bg-[#0A0A0F] border border-[#2E2E3A] p-2 w-full resize-y"
+                />
+              </PromptForgeDock>
             ) : (
               <p className="font-sans text-xs text-[#C8C0B8] leading-relaxed">{character.visuals}</p>
             )}
@@ -241,12 +249,19 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
               <span>📜 OPERATIONAL HISTORY</span>
             </h5>
             {isEditing ? (
-              <textarea
+              <PromptForgeDock
+                domain="character-backstory"
                 value={editedCharacter.backstory}
-                onChange={(e) => handleInputChange('backstory', e.target.value)}
-                rows={2}
-                className="font-sans text-xs text-[#C8C0B8] bg-[#0A0A0F] border border-[#2E2E3A] p-2 w-full resize-y"
-              />
+                onApply={(next) => handleInputChange('backstory', next)}
+                hints={[character.name, character.role ?? '']}
+              >
+                <textarea
+                  value={editedCharacter.backstory}
+                  onChange={(e) => handleInputChange('backstory', e.target.value)}
+                  rows={2}
+                  className="font-sans text-xs text-[#C8C0B8] bg-[#0A0A0F] border border-[#2E2E3A] p-2 w-full resize-y"
+                />
+              </PromptForgeDock>
             ) : (
               <p className="font-sans text-xs text-[#8E8A84] leading-relaxed">{character.backstory}</p>
             )}
